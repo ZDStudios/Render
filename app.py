@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, request, Response
+from flask import Flask, request, Response, jsonify
 
 TARGET = "http://zdstudios.duckdns.org:10531"
 app = Flask(__name__)
@@ -9,18 +9,21 @@ app = Flask(__name__)
 @app.route("/<path:path>", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS"])
 def proxy(path):
     url = f"{TARGET}/{path}"
-    resp = requests.request(
-        method=request.method,
-        url=url,
-        headers={k: v for k, v in request.headers if k.lower() != "host"},
-        data=request.get_data(),
-        params=request.args,
-        stream=True,
-        timeout=120,
-    )
-    return Response(resp.iter_content(chunk_size=4096),
-                    status=resp.status_code,
-                    headers=dict(resp.headers))
+    try:
+        resp = requests.request(
+            method=request.method,
+            url=url,
+            headers={k: v for k, v in request.headers if k.lower() != "host"},
+            data=request.get_data(),
+            params=request.args,
+            stream=True,
+            timeout=120,
+        )
+        return Response(resp.iter_content(chunk_size=4096),
+                        status=resp.status_code,
+                        headers=dict(resp.headers))
+    except Exception as e:
+        return jsonify({"proxy_error": str(e), "target": url}), 502
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
